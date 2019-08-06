@@ -21,7 +21,7 @@ class ManipulatorInfo:
                  joint_maxforce, joint_maxvel,
                  ee_link_id, arm_jids_lst, ee_jid, finger_jids_lst,
                  left_ee_link_id=None, left_arm_jids_lst=None,
-                 left_ee_jid=None, left_finger_jids_lst=None):
+                 left_ee_jid=None, left_finger_jids_lst=None, output_noise_var=0.0):
         self.robot_id = robot_id
         self.joint_ids = joint_ids
         self.joint_names = joint_names
@@ -38,6 +38,7 @@ class ManipulatorInfo:
         self.left_ee_jid = left_ee_jid
         self.left_finger_jids_lst = left_finger_jids_lst
         self.dof = len(joint_ids)
+        self.output_noise_var = output_noise_var
 
     def print(self):
         print('ManipulatorInfo: robot_id', self.robot_id,
@@ -54,7 +55,8 @@ class ManipulatorInfo:
               '\n left_ee_link_id', self.left_ee_link_id,
               '\n left_arm_jids_lst', self.left_arm_jids_lst,
               '\n left_ee_jid', self.left_ee_jid,
-              '\n left_finger_jids_lst', self.left_finger_jids_lst)
+              '\n left_finger_jids_lst', self.left_finger_jids_lst,
+              '\n noise in output torques ', self.output_noise_var)
 
 class BulletManipulator:
     # https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12077
@@ -66,13 +68,16 @@ class BulletManipulator:
                  control_mode, base_pos, rest_arm_qpos=None,
                  left_ee_joint_name=None, left_ee_link_name=None,
                  left_fing_link_prefix=None, left_joint_suffix=None,
-                 left_rest_arm_qpos=None,
+                 left_rest_arm_qpos=None, output_noise_var=0.0,
                  dt=1.0/240.0, kp=1.0, kd=0.1, min_z=0.0,
                  visualize=False, cam_dist=1.5, cam_yaw=25, cam_pitch=-35,
                  cam_target=(0.5, 0, 0), debug_level=0):
         assert(control_mode in
                ('ee_position', 'position', 'velocity', 'torque'))
         self.control_mode = control_mode
+        # Variance of normal noise in the output action of the manipulator
+        # Noise is proportional to max allowed value for each action
+        self.output_noise_var = output_noise_var
         self.dt = dt; self.kp = kp; self.kd = kd; self.min_z = min_z
         self.debug_level = debug_level
         self.visualize = visualize; self.cam_dist = cam_dist
@@ -482,17 +487,26 @@ class BulletManipulator:
             des_ee_quat = action[3:7]
             assert(np.isclose(np.linalg.norm(des_ee_quat), 1.0))  # invalid quat
             des_ee_fing_dist = action[7]
+            # Adding noise to desired eepos of +- 10cm*output_noise_var, no noise to quat
+            des_ee_pos += np.random.randn()*0.1*self.output_noise_var
             self.move_to_ee_pos(des_ee_pos, des_ee_quat,
                                 fing_dist=des_ee_fing_dist,
                                 mode=pybullet.POSITION_CONTROL)
         elif self.control_mode == 'position':
+            # Adding noise to desired joint pos of +-pi*output_noise_var
+            action += np.random.randn() * np.pi * self.output_noise_var
             print('qpos', action, 'kp', self.kp, 'kd', self.kd)
             self.move_to_qpos(action, mode=pybullet.POSITION_CONTROL,
                               kp=self.kp, kd=self.kd)
         elif self.control_mode == 'velocity':
+            # Adding noise to desired joint vel of +-MAX_VEL*output_noise_var
+            action += np.random.randn() * BulletManipulator.MAX_VELOCITY * self.output_noise_var
+            print('qpos', action, 'kp', self.kp, 'kd', self.kd)
             self.move_with_qvel(action, mode=pybullet.VELOCITY_CONTROL,
                                 kp=self.kp, kd=self.kd)
         elif self.control_mode == 'torque':
+            # Adding noise to desired joint torque of +-MAX_TORQUE*output_noise_var
+            action += np.random.randn() * self.info.joint_maxforce * self.output_noise_var
             self.apply_joint_torque(action, compensate_gravity=True)
         else:
             assert(False)  # unknown control mode
