@@ -127,23 +127,24 @@ class ManipulatorEnv(gym.Env):
         return rnd_params
 
     def set_randomize(self, rnd_params, debug=False):
-        assert(rnd_params.shape[0]==len(self.object_ids)*4)
-        rnd_params = rnd_params.reshape(len(self.object_ids), -1)
-        for objid in range(len(self.object_ids)):
-            mass = rnd_params[objid, 0]
-            restitution = rnd_params[objid, 1]
-            lat_fric = rnd_params[objid, 2]
-            rol_fric = rnd_params[objid, 3]
-            # TODO: Does bullet change inertial matrix based on mass, shape
-            # TODO: and type, or do we need to re-specify manually?
-            self.robot.sim.changeDynamics(
-                self.object_ids[objid], -1, mass=mass,
-                lateralFriction=lat_fric,
-                rollingFriction=rol_fric, restitution=restitution)
-            if debug:
-                msg = 'changeDynamics for obj {:d}: mass {:.4f}'
-                msg += ' restitution {:.4f} lat_fric {:.4f} roll_fric {:.4f}'
-                print(msg.format(objid, mass, restitution, lat_fric, rol_fric))
+        if len(self.object_ids) > 0:
+            assert(rnd_params.shape[0]==len(self.object_ids)*4)
+            rnd_params = rnd_params.reshape(len(self.object_ids), -1)
+            for objid in range(len(self.object_ids)):
+                mass = rnd_params[objid, 0]
+                restitution = rnd_params[objid, 1]
+                lat_fric = rnd_params[objid, 2]
+                rol_fric = rnd_params[objid, 3]
+                # TODO: Does bullet change inertial matrix based on mass, shape
+                # TODO: and type, or do we need to re-specify manually?
+                self.robot.sim.changeDynamics(
+                    self.object_ids[objid], -1, mass=mass,
+                    lateralFriction=lat_fric,
+                    rollingFriction=rol_fric, restitution=restitution)
+                if debug:
+                    msg = 'changeDynamics for obj {:d}: mass {:.4f}'
+                    msg += ' restitution {:.4f} lat_fric {:.4f} roll_fric {:.4f}'
+                    print(msg.format(objid, mass, restitution, lat_fric, rol_fric))
 
     def step(self, action):  # assume unscaled action
         action = np.clip(action, self.action_space.low, self.action_space.high)

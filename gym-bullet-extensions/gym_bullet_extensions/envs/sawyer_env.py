@@ -22,9 +22,12 @@ class SawyerEnv(ManipulatorEnv):
             os.path.join('sawyer_robot', 'urdf', 'sawyer_bullet.urdf'),
             control_mode=control_mode,
             ee_joint_name='right_hand', ee_link_name='right_hand',
-            base_pos=[0,0,0],
-            rest_arm_qpos=rest_qpos,
-            visualize=visualize)
+            base_pos=[0, 0, 0.0], dt=1.0 / 240.0,
+            kp=([200.0] * 7 + [1.0] * 2),
+            kd=([2.0] * 7 + [0.1] * 2),
+            min_z=0.00,
+            visualize=visualize,
+            rest_arm_qpos=rest_qpos)
         assert(num_objects<=2)
         table_minmax_x_minmax_y = np.array([0.15, 0.77, -0.475, 0.475])
         super(SawyerEnv, self).__init__(

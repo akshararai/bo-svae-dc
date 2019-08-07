@@ -280,7 +280,10 @@ class BulletManipulator:
 
     def get_max_fing_dist(self):
         farr = np.array(self.info.finger_jids_lst)
-        return self.info.joint_maxpos[farr].sum() # for symmetric commands
+        if len(farr)>0:
+            return self.info.joint_maxpos[farr].sum() # for symmetric commands
+        else:
+            return 0
 
     def get_qpos(self):
         joint_states = self.sim.getJointStates(
