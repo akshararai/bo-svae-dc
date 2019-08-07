@@ -1,3 +1,3 @@
 from gym_bullet_extensions.envs.yumi_env import YumiEnv
 from gym_bullet_extensions.envs.franka_env import FrankaEnv
-from gym_bullet_extensions.envs.franka_env import SawyerEnv
+from gym_bullet_extensions.envs.sawyer_env import SawyerEnv

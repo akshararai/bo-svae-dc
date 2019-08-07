@@ -19,7 +19,7 @@ class SawyerEnv(ManipulatorEnv):
         self.debug_level = debug_level
         rest_qpos = [0.0, 0.0, 0.0, 1.57079633, 0.0 ,1.03672558, 0.0]
         robot = BulletManipulator(
-            os.path.join('sawyer', 'urdf', 'sawyer_bullet.urdf'),
+            os.path.join('sawyer_robot', 'urdf', 'sawyer_bullet.urdf'),
             control_mode=control_mode,
             ee_joint_name='right_hand', ee_link_name='right_hand',
             base_pos=[0,0,0],

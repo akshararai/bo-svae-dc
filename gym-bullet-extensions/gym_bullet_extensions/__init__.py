@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 ctrl_modes = {'EEPos':'ee_position',
               'Pos':'position', 'Vel':'velocity', 'Torque':'torque'}
 max_num_obj = 2
-for env_base in ['Franka', 'Yumi']:
+for env_base in ['Franka', 'Yumi', 'Sawyer']:
     max_episode_steps = 500 if env_base=='Franka' else 1000
     for ctrl_nm, ctrl_mode in ctrl_modes.items():
         nm_str = env_base+ctrl_nm
