@@ -137,14 +137,14 @@ class WaypointsPosPolicy:
         else:
             ctrl_lows[:, 0] = 0.1; ctrl_highs[:, 0] = 0.5  # x
             ctrl_lows[:, 1] = -0.4; ctrl_highs[:, 1] = 0.2  # y
-            ctrl_lows[:, 2] = -0.15; ctrl_highs[:, 2] = 0.25  # z
+            ctrl_lows[:, 2] = -0.25; ctrl_highs[:, 2] = 0.25  # z
             min_kp = 100.0; max_kp = 500.0; min_kd = 10.0; max_kd = 50.0
 
         robot_ee_pos, robot_ee_quat = robot.get_ee_pos_ori_vel()[0:2]
         ctrl_lows[:,0:3] += robot_ee_pos; ctrl_highs[:,0:3] += robot_ee_pos
         # gripper orientation encoded in euler angles
         robot_euler = quaternion_to_euler(robot_ee_quat)
-        print("robot_quat ", robot_ee_quat, 'robot_pos ', robot_ee_pos)
+        # print("robot_quat ", robot_ee_quat, 'robot_pos ', robot_ee_pos)
         ctrl_lows[:,3:6] = robot_euler - np.pi/2
         ctrl_highs[:,3:6] = robot_euler + np.pi/2
         ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
@@ -162,8 +162,8 @@ class WaypointsPosPolicy:
             fwd_rpy = np.array([np.pi,-np.pi/2,0])
             rpys = np.clip(rpys, fwd_rpy-small_angle, fwd_rpy+small_angle)
         else:
-            if np.any(abs(rpys-np.pi) < 0.1):
-                print(rpys)
+            # if np.any(abs(rpys-np.pi) < 0.1):
+                # print(rpys)
             rid = 1  #  restrict roll (down)
             almost_down = np.pi-small_angle
             nondown_ids = np.where(np.abs(rpys[:,rid])<almost_down)
@@ -327,7 +327,7 @@ class WaypointsMinJerkPolicy(WaypointsPosPolicy):
         des_ee_quat = euler_to_quaternion(des_ee_orient) #np.array([0.6422, 0.7666, 0.0003, 0.0003]) #
         curr_ee_orient = quaternion_to_euler(curr_ee_quat)
         th = 2.0*np.arccos(abs(np.clip(np.linalg.multi_dot([des_ee_quat, curr_ee_quat]), -1.0, 1.0)))
-        des_ee_torque = (1.0*th - 0.1*curr_ee_angvel)
+        des_ee_torque = 2.0*(1.0*th - 0.1*curr_ee_angvel)
         J_lin, J_ang = self.robot.get_ee_jacobian(left=left)
         jacobian = np.vstack([J_lin, J_ang])
         # print("des_force, des_torque = ", des_ee_force, ' ', des_ee_torque)
