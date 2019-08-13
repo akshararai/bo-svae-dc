@@ -9,8 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from . import svae_dc_nets as nets
-
+import svae_dc_nets as nets
 
 def torch_mean(lst):
     mn = np.nan if len(lst)==0 else np.array(lst).mean()

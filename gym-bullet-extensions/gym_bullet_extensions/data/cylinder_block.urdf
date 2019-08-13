@@ -10,13 +10,13 @@
       <contact_erp value="1.0"/>
     </contact>
     <inertial>
-      <mass value="2.0"/>
+      <mass value="5.0"/>
       <inertia ixx="0.075" ixy="0.0" ixz="0.0" iyy="0.075" iyz="0.0" izz="0.0032"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
     </inertial>
     <visual>
       <geometry>
-        <cylinder length="0.22" radius="0.08"/>
+        <cylinder length="0.25" radius="0.08"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <material name="wood">
@@ -27,7 +27,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder length="0.22" radius="0.08"/>
+        <cylinder length="0.25" radius="0.08"/>
       </geometry>
     </collision>
   </link>

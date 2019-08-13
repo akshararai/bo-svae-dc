@@ -7,7 +7,7 @@ ctrl_modes = {'EEPos':'ee_position',
               'Pos':'position', 'Vel':'velocity', 'Torque':'torque'}
 max_num_obj = 2
 for env_base in ['Franka', 'Yumi', 'Sawyer']:
-    max_episode_steps = 500 if env_base=='Franka' else 1000
+    max_episode_steps = 1000 if env_base=='Yumi' else 500
     for ctrl_nm, ctrl_mode in ctrl_modes.items():
         nm_str = env_base+ctrl_nm
         for num_obj in range(max_num_obj+1):

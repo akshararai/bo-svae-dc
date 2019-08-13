@@ -116,6 +116,8 @@ class WaypointsPosPolicy:
         self.traj = np.copy(traj)
         self.ee_pos_traj = np.copy(ee_pos_traj)
         self.ee_quat_traj = np.copy(ee_quat_traj)
+        self.ee_orientation_old = [0.0001, -3.1408,  1.7469]
+        self.ee_quat_old = [0.6422, 0.7666, 0.0003, 0.0003]
 
     @staticmethod
     def waypts_regions(robot, num_waypts, dim, yumi=True):
@@ -133,14 +135,18 @@ class WaypointsPosPolicy:
             ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
             min_kp = 100.0; max_kp = 1000.0; min_kd = 10.0; max_kd = 100.0
         else:
-            ctrl_lows[:,0] = 0.2; ctrl_highs[:,0] = 0.65   # x
-            ctrl_lows[:,1] = -0.40; ctrl_highs[:,1] = 0.4  # y
-            ctrl_lows[:,2] = 0.1; ctrl_highs[:,2] = 0.25   # z
-            min_kp = 50.0; max_kp = 500.0; min_kd = 10.0; max_kd = 50.0
-        robot_pos = np.array(robot_pos)
-        ctrl_lows[:,0:3] += robot_pos; ctrl_highs[:,0:3] += robot_pos
+            ctrl_lows[:, 0] = -0.2; ctrl_highs[:, 0] = 0.3  # x
+            ctrl_lows[:, 1] = -0.3; ctrl_highs[:, 1] = 0.5  # y
+            ctrl_lows[:, 2] = -0.35; ctrl_highs[:, 2] = 0.2  # z
+            min_kp = 100.0; max_kp = 500.0; min_kd = 10.0; max_kd = 50.0
+
+        robot_ee_pos, robot_ee_quat = robot.get_ee_pos_ori_vel()[0:2]
+        ctrl_lows[:,0:3] += robot_ee_pos; ctrl_highs[:,0:3] += robot_ee_pos
         # gripper orientation encoded in euler angles
-        ctrl_lows[:,3:6] = -np.pi;  ctrl_highs[:,3:6] = np.pi
+        robot_euler = quaternion_to_euler(robot_ee_quat)
+        print("robot_quat ", robot_ee_quat, 'robot_pos ', robot_ee_pos)
+        ctrl_lows[:,3:6] = robot_euler - np.pi/2
+        ctrl_highs[:,3:6] = robot_euler + np.pi/2
         ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
         ctrl_lows[:,7] = min_kp; ctrl_highs[:,7] = max_kp
         ctrl_lows[:,8] = min_kd; ctrl_highs[:,8] = max_kd
@@ -151,12 +157,14 @@ class WaypointsPosPolicy:
         # Initialize EE waypoints appropriate to search for a pushing strategy.
         # Restrict the gripper to point mostly down (and forward for yumi).
         rpys = prms[:,3:6]
-        small_angle = np.pi/16
+        small_angle = np.pi/16.0
         if yumi:  # restrict pitch (forward)
             fwd_rpy = np.array([np.pi,-np.pi/2,0])
             rpys = np.clip(rpys, fwd_rpy-small_angle, fwd_rpy+small_angle)
         else:
-            rid = 0  #  restrict roll (down)
+            if np.any(abs(rpys-np.pi) < 0.1):
+                print(rpys)
+            rid = 1  #  restrict roll (down)
             almost_down = np.pi-small_angle
             nondown_ids = np.where(np.abs(rpys[:,rid])<almost_down)
             rpys[nondown_ids,rid] = almost_down*np.sign(rpys[nondown_ids,rid])
@@ -239,7 +247,7 @@ class WaypointsPosPolicy:
 
 
 class WaypointsEEPolicy(WaypointsPosPolicy):
-    NUM_WAYPTS = 6
+    NUM_WAYPTS = 3
     WAYPT_DIM = 7 # (3+3+1): EE pos, euler, fing_dist, kp, kd
     DIM = NUM_WAYPTS*WAYPT_DIM
 
@@ -263,6 +271,7 @@ class WaypointsMinJerkPolicy(WaypointsPosPolicy):
 
     def make_traj(self, waypts, t_max, robot, get_init_pos_fxn):
         assert(robot.control_mode == 'torque')  # need torque-controlled robot
+        # print('waypoints = ', waypts)
         # Compute minimum jerk trajectory
         _, prev_ee_pos, prev_ee_quat, _, = get_init_pos_fxn()
         prev_fing_dist = robot.get_fing_dist()
@@ -295,7 +304,7 @@ class WaypointsMinJerkPolicy(WaypointsPosPolicy):
             t += steps_per_waypt
             prev_ee_pos = ee_pos; prev_ee_orient = ee_orient
             prev_fing_dist = fing_dist
-        if t+1<self.t_max: traj[t+1:,:] = traj[t,:]  # set rest to last entry
+        if t<self.t_max: traj[t:,:] = traj[t-1,:]  # set rest to last entry
         return traj, traj[:,0:3], ee_quat_traj
 
     def get_action(self, obs, t=None, left=False):
@@ -308,22 +317,28 @@ class WaypointsMinJerkPolicy(WaypointsPosPolicy):
         des_ee_acc = action[6:9]
         des_ee_orient = action[9:12]
         kp = action[12]; kd = action[13]
+
+        # print('Kp and Kd ', kp,' ', kd)
         curr_ee_pos, curr_ee_quat, curr_ee_linvel, curr_ee_angvel = \
             self.robot.get_ee_pos_ori_vel()
         des_ee_force = (kp*(des_ee_pos - curr_ee_pos) +
                         kd*(des_ee_vel - curr_ee_linvel) + des_ee_acc)
+        # print('des_ee = ', des_ee_pos, 'act ee = ', curr_ee_pos)
+        des_ee_quat = euler_to_quaternion(des_ee_orient) #np.array([0.6422, 0.7666, 0.0003, 0.0003]) #
         curr_ee_orient = quaternion_to_euler(curr_ee_quat)
-        des_ee_torque = (1.0*(des_ee_orient - curr_ee_orient) -
-                         0.1*curr_ee_angvel)
+        th = 2.0*np.arccos(abs(np.clip(np.linalg.multi_dot([des_ee_quat, curr_ee_quat]), -1.0, 1.0)))
+        des_ee_torque = (1.0*th - 0.1*curr_ee_angvel)
         J_lin, J_ang = self.robot.get_ee_jacobian(left=left)
         jacobian = np.vstack([J_lin, J_ang])
+        # print("des_force, des_torque = ", des_ee_force, ' ', des_ee_torque)
         torque = np.matmul(jacobian.transpose(),
                            np.hstack([des_ee_force, des_ee_torque]))
-        # Fingers closed for this policy.
-        fing_dist = self.robot.get_fing_dist()
-        maxforce = self.robot.info.joint_maxforce
-        for jid in self.robot.info.finger_jids_lst:
-            torque[jid] = 0 if fing_dist<=0.001 else -maxforce[jid]/2
+        # print('torque ', torque)
+        # # Fingers closed for this policy.
+        # fing_dist = self.robot.get_fing_dist()
+        # maxforce = self.robot.info.joint_maxforce
+        # for jid in self.robot.info.finger_jids_lst:
+        #     torque[jid] = 0 if fing_dist<=0.001 else -maxforce[jid]/2
         return torque
 
     def print(self):

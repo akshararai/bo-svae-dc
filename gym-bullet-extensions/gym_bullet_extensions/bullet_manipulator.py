@@ -222,9 +222,9 @@ class BulletManipulator:
 
     def refresh_viz(self):
         time.sleep(0.1)
-        self.sim.resetDebugVisualizerCamera(
-            cameraDistance=self.cam_dist, cameraYaw=self.cam_yaw,
-            cameraPitch=self.cam_pitch, cameraTargetPosition=self.cam_target)
+        # self.sim.resetDebugVisualizerCamera(
+        #     cameraDistance=self.cam_dist, cameraYaw=self.cam_yaw,
+        #     cameraPitch=self.cam_pitch, cameraTargetPosition=self.cam_target)
 
     def load_objects_from_file(self, objects_file, object_poses, object_quats):
         # Subclasses can call this method to load custom obstacles.
@@ -484,7 +484,7 @@ class BulletManipulator:
             assert(False)  # unknown control mode
         return low, high
 
-    def apply_action(self, action):
+    def apply_action(self, action, compensate_gravity=True):
         if self.control_mode == 'ee_position':
             des_ee_pos = action[0:3]
             des_ee_quat = action[3:7]
@@ -510,7 +510,7 @@ class BulletManipulator:
         elif self.control_mode == 'torque':
             # Adding noise to desired joint torque of +-MAX_TORQUE*output_noise_var
             action += np.random.randn() * self.info.joint_maxforce * self.output_noise_var
-            self.apply_joint_torque(action, compensate_gravity=True)
+            self.apply_joint_torque(action, compensate_gravity=compensate_gravity)
         else:
             assert(False)  # unknown control mode
 
@@ -539,6 +539,13 @@ class BulletManipulator:
             localPosition=[0, 0, 0],
             objPositions=qpos.tolist(), objVelocities=qvel.tolist(),
             objAccelerations=[0]*self.info.dof)
+        ee_vel = self.get_ee_pos_ori_vel()[2]
+        # print('ee_vel = ', ee_vel)
+        # print('jacobian multiplication = ', np.dot(J_lin,qvel))
+        # print('joint vel = ', qvel)
+        # print('Jacobian =',J_lin)
+        # print('differece = ', np.linalg.norm(ee_vel-np.dot(J_lin,qvel)))
+
         return np.array(J_lin), np.array(J_ang)
 
     def inverse_dynamics(self, des_acc):

@@ -77,10 +77,11 @@ class ManipulatorEnv(gym.Env):
         self.table_max_y = table_minmax_x_minmax_y[3]
         table_half_x = (self.table_max_x-self.table_min_x)/2
         table_half_y = (self.table_max_y-self.table_min_y)/2
-        table_center = [self.table_min_x+table_half_x, 0, -0.049]
-        table_half_extents = [table_half_x, table_half_y, 0.05]
-        self.robot.create_visual_area(pybullet.GEOM_BOX, table_center,
-                                      table_half_extents, rgba=[0,0.1,0,1.0])
+        table_center = [0.25, 0.25, 0.15]
+        # table_half_extents = [table_half_x, table_half_y, self.robot.min_z]
+        # self.robot.create_visual_area(pybullet.GEOM_BOX, table_center,
+        #                               table_half_extents, rgba=[0,0.1,0,1.0])
+        self.table_id = self.robot.load_objects_from_file('table.urdf',  np.array([table_center]), [[0,0,1,1]])
         # Create a list of names for obs for easier debugging.
         joint_names = self.robot.info.joint_names
         obs_names = [nm+'_pos' for nm in joint_names]
@@ -95,7 +96,7 @@ class ManipulatorEnv(gym.Env):
         return self.obs_names
 
     def reset(self):
-        if self.visualize: input('Pres Enter to continue reset')
+        # if self.visualize: input('Pres Enter to continue reset')
         self.stepnum = 0
         self.badlen = 0
         self.collided = False
@@ -153,7 +154,7 @@ class ManipulatorEnv(gym.Env):
         next_obs = self.get_obs()
         # Update internal counters.
         self.stepnum += 1
-        is_bad = self.get_is_bad()
+        is_bad = self.get_is_bad(debug=True)
         if is_bad: self.badlen += 1
         # Report reward stats and other info.
         reward = 0.0

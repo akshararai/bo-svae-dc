@@ -9,16 +9,16 @@ import os
 
 import numpy as np
 
-from .utils.svae_dc_utils import (
+from utils.svae_dc_utils import (
     make_env_from_args, make_policy_from_args, get_scaled_obs
 )
 
 def get_args():
     parser = argparse.ArgumentParser(description="CollectEnvExperience")
-    parser.add_argument('--env_name', type=str, default='YumiVel-v2',
+    parser.add_argument('--env_name', type=str, default='SawyerTorqueViz-v2',
                         help='Gym env name string')
     parser.add_argument('--controller_class', type=str,
-                        default='WaypointsVelPolicy',
+                        default='WaypointsMinJerkPolicy',
                         choices=['DaisyGait11DPolicy', 'DaisyGait27DPolicy',
                                  'DaisyTripod27DPolicy',
                                  'WaypointsPosPolicy', 'WaypointsMinJerkPolicy',
@@ -26,9 +26,9 @@ def get_args():
                         help='Controller class name')
     parser.add_argument('--output_prefix', type=str,
                         default=os.path.expanduser('~/local/experience/'))
-    parser.add_argument('--num_procs', type=int, default=8,
+    parser.add_argument('--num_procs', type=int, default=1,
                         help='Number of processes for envs')
-    parser.add_argument('--num_episodes', type=int, default=100000,
+    parser.add_argument('--num_episodes', type=int, default=100,
                         help='Number of env processes for traj collection')
     parser.add_argument('--norandomize', action='store_true',
                         help='Turn off randomize of simulator physics params')
@@ -71,7 +71,9 @@ def collect_episodes(args):
         while True:
             env.render()
             action = policy.get_action(obs, t=step)
+            # print('action =', action)
             obs, rwd, done, info = env.step(action)
+            import time; time.sleep(0.01)
             step += 1  # increment step before recording obs
             xi_1toT_buf[sid,step,:] = get_scaled_obs(obs, env)
             bads_1toT_buf[sid,step] = float(info['is_bad'])
