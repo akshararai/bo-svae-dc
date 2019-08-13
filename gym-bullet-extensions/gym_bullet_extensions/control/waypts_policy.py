@@ -135,9 +135,9 @@ class WaypointsPosPolicy:
             ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
             min_kp = 100.0; max_kp = 1000.0; min_kd = 10.0; max_kd = 100.0
         else:
-            ctrl_lows[:, 0] = -0.2; ctrl_highs[:, 0] = 0.3  # x
-            ctrl_lows[:, 1] = -0.3; ctrl_highs[:, 1] = 0.5  # y
-            ctrl_lows[:, 2] = -0.35; ctrl_highs[:, 2] = 0.2  # z
+            ctrl_lows[:, 0] = 0.1; ctrl_highs[:, 0] = 0.5  # x
+            ctrl_lows[:, 1] = -0.4; ctrl_highs[:, 1] = 0.2  # y
+            ctrl_lows[:, 2] = -0.15; ctrl_highs[:, 2] = 0.25  # z
             min_kp = 100.0; max_kp = 500.0; min_kd = 10.0; max_kd = 50.0
 
         robot_ee_pos, robot_ee_quat = robot.get_ee_pos_ori_vel()[0:2]

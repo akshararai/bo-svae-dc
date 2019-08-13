@@ -154,7 +154,7 @@ class ManipulatorEnv(gym.Env):
         next_obs = self.get_obs()
         # Update internal counters.
         self.stepnum += 1
-        is_bad = self.get_is_bad(debug=True)
+        is_bad = self.get_is_bad(debug=False)
         if is_bad: self.badlen += 1
         # Report reward stats and other info.
         reward = 0.0
@@ -234,12 +234,13 @@ class ManipulatorEnv(gym.Env):
             rwd += np.array(y_lst).sum() # reward moving objects
         return rwd
 
-    def get_is_bad(self, ee_eps=0.05, debug=False):
+    def get_is_bad(self, ee_eps=0.01, debug=False):
         ee_pos = self.robot.get_ee_pos()
         min_x = self.table_min_x-ee_eps; max_x = self.table_max_x+ee_eps
         min_y = self.table_min_y-ee_eps; max_y = self.table_max_y+ee_eps
         if (ee_pos[0]<min_x or ee_pos[0]>max_x or
-            ee_pos[1]<min_y or ee_pos[1]>max_y):
+            ee_pos[1]<min_y or ee_pos[1]>max_y or
+            ee_pos[2]>self.robot.min_z*1.5):
             if debug: print('robot arm outside of workspace area')
             return True
         if ee_pos[2]<=self.robot.min_z:

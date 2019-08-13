@@ -73,7 +73,7 @@ def collect_episodes(args):
             action = policy.get_action(obs, t=step)
             # print('action =', action)
             obs, rwd, done, info = env.step(action)
-            import time; time.sleep(0.01)
+            # import time; time.sleep(0.01)
             step += 1  # increment step before recording obs
             xi_1toT_buf[sid,step,:] = get_scaled_obs(obs, env)
             bads_1toT_buf[sid,step] = float(info['is_bad'])

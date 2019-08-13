@@ -17,7 +17,7 @@ class SawyerEnv(ManipulatorEnv):
     def __init__(self, num_objects, max_episode_steps,
                  control_mode='velocity', visualize=False, debug_level=0):
         self.debug_level = debug_level
-        rest_qpos = [-0., -1.18, 0., 2.18, -0., 0.57, 3.14]
+        rest_qpos = [-0.2, -1.18, 0., 2.18, -0., 0.57, 3.14]
         robot = BulletManipulator(
             os.path.join('sawyer_robot', 'urdf', 'sawyer_bullet.urdf'),
             control_mode=control_mode,
@@ -27,7 +27,7 @@ class SawyerEnv(ManipulatorEnv):
             visualize=visualize,
             rest_arm_qpos=rest_qpos)
         assert(num_objects<=2)
-        table_minmax_x_minmax_y = np.array([0.1, 0.67, -0.45, 0.50])
+        table_minmax_x_minmax_y = np.array([-0.8, 0.8, 0.0, 1.0])
         super(SawyerEnv, self).__init__(
             robot, num_objects, table_minmax_x_minmax_y,
             'cylinder_block.urdf', max_episode_steps, visualize,
@@ -50,17 +50,17 @@ class SawyerEnv(ManipulatorEnv):
     def get_all_init_object_poses(self, num_objects):
         # 1st object starts at x=0.25 2nd ends at x=0.48
         all_init_object_poses = np.array([
-            [0.3,0.35, 0.8], [0.45,0.35,0.8]])
+            [0.3,0.35,0.8], [0.45,0.45,0.8]])
         init_object_quats = [[0,0,0,1]]*num_objects
         return all_init_object_poses[0:num_objects], init_object_quats
 
     def get_init_pos(self):
-        ee_pos = np.array([0.4496, 0.1603, 1.1158])
-        ee_quat = np.array([0.6422, 0.7666, 0.0003, 0.0003])
+        ee_pos = np.array([-0.4484,  0.8363,  0.684 ])
+        ee_quat = np.array([0.2442,  0.8317,  0.447,  -0.2208])
         fing_dist = 0.0
         # init_qpos = self.robot.ee_pos_to_qpos(
         #     ee_pos, ee_quat, fing_dist=fing_dist)
         # assert(init_qpos is not None)
         # Use a manual qpos (to avoid instabilities of IK solutions).
-        init_qpos = np.array([-0., -1.18, 0., 2.18, -0., 0.57, 3.14])
+        init_qpos = np.array([-0.2, -1.18, 0., 2.18, -0., 0.57, 3.14])
         return init_qpos, ee_pos, ee_quat, fing_dist
