@@ -10,7 +10,7 @@
       <contact_erp value="1.0"/>
     </contact>
     <inertial>
-      <mass value="5.0"/>
+      <mass value="10.0"/>
       <inertia ixx="0.075" ixy="0.0" ixz="0.0" iyy="0.075" iyz="0.0" izz="0.0032"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
     </inertial>

@@ -135,18 +135,18 @@ class WaypointsPosPolicy:
             ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
             min_kp = 100.0; max_kp = 1000.0; min_kd = 10.0; max_kd = 100.0
         else:
-            ctrl_lows[:, 0] = 0.1; ctrl_highs[:, 0] = 0.5  # x
-            ctrl_lows[:, 1] = -0.4; ctrl_highs[:, 1] = 0.2  # y
-            ctrl_lows[:, 2] = -0.25; ctrl_highs[:, 2] = 0.25  # z
+            ctrl_lows[:, 0] = 0.3; ctrl_highs[:, 0] = 0.6  # x
+            ctrl_lows[:, 1] = -0.1; ctrl_highs[:, 1] = 0.4  # y
+            ctrl_lows[:, 2] = -0.3; ctrl_highs[:, 2] = 0.2  # z
             min_kp = 100.0; max_kp = 500.0; min_kd = 10.0; max_kd = 50.0
 
-        robot_ee_pos, robot_ee_quat = robot.get_ee_pos_ori_vel()[0:2]
-        ctrl_lows[:,0:3] += robot_ee_pos; ctrl_highs[:,0:3] += robot_ee_pos
+        # robot_ee_pos, robot_ee_quat = robot.get_ee_pos_ori_vel()[0:2]
+        ctrl_lows[:,0:3] += robot_pos; ctrl_highs[:,0:3] += robot_pos
         # gripper orientation encoded in euler angles
-        robot_euler = quaternion_to_euler(robot_ee_quat)
-        # print("robot_quat ", robot_ee_quat, 'robot_pos ', robot_ee_pos)
-        ctrl_lows[:,3:6] = robot_euler - np.pi/2
-        ctrl_highs[:,3:6] = robot_euler + np.pi/2
+        robot_euler = quaternion_to_euler(robot_quat)
+        # print("robot_quat ", robot_quat, 'robot_pos ', robot_pos)
+        ctrl_lows[:,3:6] = robot_euler - np.pi
+        ctrl_highs[:,3:6] = robot_euler + np.pi
         ctrl_lows[:,6] = 0; ctrl_highs[:,6] = robot.get_max_fing_dist()
         ctrl_lows[:,7] = min_kp; ctrl_highs[:,7] = max_kp
         ctrl_lows[:,8] = min_kd; ctrl_highs[:,8] = max_kd
@@ -316,29 +316,28 @@ class WaypointsMinJerkPolicy(WaypointsPosPolicy):
         des_ee_vel = action[3:6]
         des_ee_acc = action[6:9]
         des_ee_orient = action[9:12]
-        kp = action[12]; kd = action[13]
+        kpz = action[12]; kdz = action[13] ; kpxy = kpz/1.0; kdxy = kdz/1.0
+        kp = np.array([kpxy, kpxy, kpz]); kd = np.array([kdxy, kdxy, kdz])
 
         # print('Kp and Kd ', kp,' ', kd)
         curr_ee_pos, curr_ee_quat, curr_ee_linvel, curr_ee_angvel = \
             self.robot.get_ee_pos_ori_vel()
-        des_ee_force = (kp*(des_ee_pos - curr_ee_pos) +
-                        kd*(des_ee_vel - curr_ee_linvel) + des_ee_acc)
+        des_ee_force = (np.multiply(kp,(des_ee_pos - curr_ee_pos) )+
+                        np.multiply(kd,(des_ee_vel - curr_ee_linvel)) + des_ee_acc)
         # print('des_ee = ', des_ee_pos, 'act ee = ', curr_ee_pos)
         des_ee_quat = euler_to_quaternion(des_ee_orient) #np.array([0.6422, 0.7666, 0.0003, 0.0003]) #
         curr_ee_orient = quaternion_to_euler(curr_ee_quat)
-        th = 2.0*np.arccos(abs(np.clip(np.linalg.multi_dot([des_ee_quat, curr_ee_quat]), -1.0, 1.0)))
+        th = des_ee_orient - curr_ee_orient
+        # th = 1.0*np.arccos(abs(np.clip(np.linalg.multi_dot([des_ee_quat, curr_ee_quat]), -1.0, 1.0)))
         des_ee_torque = 2.0*(1.0*th - 0.1*curr_ee_angvel)
         J_lin, J_ang = self.robot.get_ee_jacobian(left=left)
         jacobian = np.vstack([J_lin, J_ang])
         # print("des_force, des_torque = ", des_ee_force, ' ', des_ee_torque)
         torque = np.matmul(jacobian.transpose(),
                            np.hstack([des_ee_force, des_ee_torque]))
-        # print('torque ', torque)
-        # # Fingers closed for this policy.
-        # fing_dist = self.robot.get_fing_dist()
-        # maxforce = self.robot.info.joint_maxforce
-        # for jid in self.robot.info.finger_jids_lst:
-        #     torque[jid] = 0 if fing_dist<=0.001 else -maxforce[jid]/2
+        # if t > self.t_max-10:
+        #     print("des ee pos = ", des_ee_pos, "curr ee pos = ", curr_ee_pos)
+
         return torque
 
     def print(self):

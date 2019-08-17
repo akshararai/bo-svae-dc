@@ -240,7 +240,7 @@ class ManipulatorEnv(gym.Env):
         min_y = self.table_min_y-ee_eps; max_y = self.table_max_y+ee_eps
         if (ee_pos[0]<min_x or ee_pos[0]>max_x or
             ee_pos[1]<min_y or ee_pos[1]>max_y or
-            ee_pos[2]>self.robot.min_z*1.5):
+            ee_pos[2]>self.robot.min_z*2.0):
             if debug: print('robot arm outside of workspace area')
             return True
         if ee_pos[2]<=self.robot.min_z:
